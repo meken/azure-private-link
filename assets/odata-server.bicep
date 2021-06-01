@@ -118,7 +118,10 @@ resource nginx 'Microsoft.Compute/virtualMachines/extensions@2020-12-01' = {
     typeHandlerVersion: '2.1'
     autoUpgradeMinorVersion: true
     protectedSettings: {
-      commandToExecute: 'apt update && apt install -y nginx'
+      fileUris: [
+        'https://raw.githubusercontent.com/meken/azure-private-link/main/assets/install-nginx.sh'
+      ]
+      commandToExecute: 'sh install-nginx.sh'
     }
   }
 }
