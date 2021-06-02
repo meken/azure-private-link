@@ -1,16 +1,22 @@
-param baseName string = 'odata'
+param suffix string = 'odata-service'
 param userName string = 'odata'
 @secure()
 param password string = concat('P', uniqueString(resourceGroup().id), 'x!')
 
 var location = resourceGroup().location
-var resourceSuffix = substring(concat(baseName, uniqueString(resourceGroup().id)), 0, 8)
 
-var subnetName = 'subnet-odata-service'
+// names of resources
+var vnetName = 'vnet-on-prem'
+var subnetName = 'subnet-${suffix}'
+var vmName = 'vm-${suffix}'
+var nicName = 'nic-${suffix}'
+var ipConfigName = 'ipconfig-${suffix}'
+var nsgName = 'nsg-${suffix}'
+
 var vmType = 'Standard_D2s_v3'
 
 resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
-  name: 'vnet-${resourceSuffix}'
+  name: 'vnet-on-prem'
   location: location
   properties: {
     addressSpace: {
@@ -34,7 +40,7 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing 
 }
 
 resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = {
-  name: 'nsg-${resourceSuffix}'
+  name: nsgName
   location: location
   properties: {
     securityRules: [
@@ -56,12 +62,12 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = {
 }
 
 resource nic 'Microsoft.Network/networkInterfaces@2020-11-01' = {
-  name: 'nic-${resourceSuffix}'
+  name: nicName
   location: location
   properties: {
     ipConfigurations: [
       {
-        name: 'ipconfig-${resourceSuffix}'
+        name: ipConfigName
         properties: {
           privateIPAllocationMethod: 'Dynamic'
           subnet: {
@@ -77,7 +83,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2020-11-01' = {
 }
 
 resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
-  name: 'vm-${resourceSuffix}'
+  name: vmName
   location: location
   properties: {
     hardwareProfile: {
@@ -95,7 +101,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
       }
     }
     osProfile: {
-      computerName: 'vm-odata-server'
+      computerName: vmName
       adminUsername: userName
       adminPassword: password
     }
@@ -125,3 +131,6 @@ resource nginx 'Microsoft.Compute/virtualMachines/extensions@2020-12-01' = {
     }
   }
 }
+
+output vnetId string = vnet.id // needed for peering
+output vmIp string = reference(nic.id, '2020-11-01').ipConfigurations[0].properties.privateIPAddress
