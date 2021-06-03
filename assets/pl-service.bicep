@@ -1,7 +1,10 @@
-param backendVmIp string = '10.3.1.4'
-param vnetName string = 'vnet-plink-service'
-param subnetName string = 'default'
-
+param backendVmIp string
+param vnetOnPremId string
+param vnetPrivateLinkId string
+param subnetPrivateLinkId string
+param userName string = 'proxy'
+@secure()
+param password string = concat('P', uniqueString(resourceGroup().id), 'x!')
 param suffix string = 'odata-service'
 
 var location = resourceGroup().location
@@ -14,14 +17,9 @@ var probeName = 'probe-${suffix}'
 var plsName = 'pl-${suffix}'
 
 var domainName = 'contoso.com'
+var proxyDNS = 'proxy-${suffix}'
+var sourceDNS = 'on-prem-${suffix}'
 
-resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' existing = {
-  name: vnetName
-}
-
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing = {
-  name: '${vnetName}/${subnetName}'
-}
 
 resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
   name: lbName
@@ -35,7 +33,7 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
         properties: {
           privateIPAllocationMethod: 'Dynamic'
           subnet: {
-            id: subnet.id
+            id: subnetPrivateLinkId // could be a different subnet as well
           }
         }
         zones: [
@@ -85,18 +83,29 @@ resource pdnsz 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 }
 
 resource pdnszVnet 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  name: '${pdnsz.name}/${vnet.name}'
+  name: '${pdnsz.name}/link-vnet-plink'
   location: 'global'
   properties: {
     registrationEnabled: false
     virtualNetwork: {
-      id: vnet.id
+      id: vnetPrivateLinkId
     }
   }
 }
 
-resource pdnszRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
-  name: '${pdnsz.name}/${suffix}'
+resource pdnszVnetOnPrem 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  name: '${pdnsz.name}/link-vnet-on-prem'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnetOnPremId
+    }
+  }
+}
+
+resource pdnszRecordProxy 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+  name: '${pdnsz.name}/${proxyDNS}'
   properties: {
     ttl: 3600
     aRecords: [{
@@ -106,29 +115,51 @@ resource pdnszRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   }
 }
 
-// resource pls 'Microsoft.Network/privateLinkServices@2020-11-01' = {
-//   name: plsName
-//   location: location
-//   properties: {
-//     visibility: {
-//       subscriptions: [
-//         subscription().subscriptionId
-//       ]
-//     }
-//     loadBalancerFrontendIpConfigurations: [{
-//         id: lb.properties.frontendIPConfigurations[0].id
-//       }
-//     ]
-//     ipConfigurations: [{
-//         name: 'default-${suffix}'
-//         properties: {
-//           privateIPAllocationMethod: 'Dynamic'
-//           subnet: {
-//             id: subnet.id
-//           }
-//         }
-//       }
-//     ]
-//   }
-// }
+resource pdnszRecordSource 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+  name: '${pdnsz.name}/${sourceDNS}'
+  properties: {
+    ttl: 3600
+    aRecords: [{
+        ipv4Address: backendVmIp
+      }
+    ]
+  }
+}
+
+module proxyServer 'reverse-proxy.bicep' = {
+  name: 'vm-proxy-${suffix}'
+  params: {
+    userName: userName
+    password: password
+    proxyTarget: '${proxyDNS}.${domainName}'
+    subnetId: subnetPrivateLinkId
+    suffix: suffix
+  }
+}
+
+resource pls 'Microsoft.Network/privateLinkServices@2020-11-01' = {
+  name: plsName
+  location: location
+  properties: {
+    visibility: {
+      subscriptions: [
+        subscription().subscriptionId
+      ]
+    }
+    loadBalancerFrontendIpConfigurations: [{
+        id: lb.properties.frontendIPConfigurations[0].id
+      }
+    ]
+    ipConfigurations: [{
+        name: 'default-${suffix}'
+        properties: {
+          privateIPAllocationMethod: 'Dynamic'
+          subnet: {
+            id: subnetPrivateLinkId
+          }
+        }
+      }
+    ]
+  }
+}
 
