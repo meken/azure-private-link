@@ -5,6 +5,8 @@ param userName string
 @secure()
 param password string
 
+param lbBackendPools array  = []
+
 var location = resourceGroup().location
 
 var vmName = 'vm-${suffix}'
@@ -49,6 +51,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2020-11-01' = {
           subnet: {
             id: subnetId
           }
+          loadBalancerBackendAddressPools: lbBackendPools
         }
       }
     ]

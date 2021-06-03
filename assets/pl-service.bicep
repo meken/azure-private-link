@@ -77,6 +77,8 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
   }
 }
 
+
+
 resource pdnsz 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: domainName
   location: 'global'
@@ -133,6 +135,7 @@ module proxyServer 'reverse-proxy.bicep' = {
     password: password
     proxyTarget: '${proxyDNS}.${domainName}'
     subnetId: subnetPrivateLinkId
+    lbBackendPools: lb.properties.backendAddressPools
     suffix: suffix
   }
 }
