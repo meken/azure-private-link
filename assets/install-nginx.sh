@@ -4,6 +4,8 @@ apt update && apt install -y nginx
 
 unlink /etc/nginx/sites-enabled/default
 
+TARGET="$1"
+
 cat <<EOT >> /etc/nginx/sites-available/reverse-proxy.conf
 server {
     listen 80;
@@ -13,7 +15,7 @@ server {
     error_log /var/log/nginx/reverse-error.log;
 
     location / {
-        proxy_pass https://services.odata.org/V3/Northwind/;
+        proxy_pass $TARGET;
     }
 }
 EOT

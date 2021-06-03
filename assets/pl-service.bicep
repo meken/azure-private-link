@@ -23,22 +23,6 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing 
   name: '${vnetName}/${subnetName}'
 }
 
-resource pool 'Microsoft.Network/loadBalancers/backendAddressPools@2020-11-01' = {
-  name: '${lbName}/${poolName}'
-  properties: {
-    loadBalancerBackendAddresses: [{
-        name: 'backend-address-${suffix}'
-        properties: {
-          ipAddress: backendVmIp
-          virtualNetwork: {
-            id: vnet.id
-          }
-        }
-      }
-    ]
-  }
-}
-
 resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
   name: lbName
   location: location
@@ -126,6 +110,25 @@ resource pdnszRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
 //   name: plsName
 //   location: location
 //   properties: {
+//     visibility: {
+//       subscriptions: [
+//         subscription().subscriptionId
+//       ]
+//     }
+//     loadBalancerFrontendIpConfigurations: [{
+//         id: lb.properties.frontendIPConfigurations[0].id
+//       }
+//     ]
+//     ipConfigurations: [{
+//         name: 'default-${suffix}'
+//         properties: {
+//           privateIPAllocationMethod: 'Dynamic'
+//           subnet: {
+//             id: subnet.id
+//           }
+//         }
+//       }
+//     ]
 //   }
 // }
 

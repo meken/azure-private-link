@@ -8,12 +8,7 @@ var location = resourceGroup().location
 // names of resources
 var vnetName = 'vnet-on-prem'
 var subnetName = 'subnet-${suffix}'
-var vmName = 'vm-${suffix}'
-var nicName = 'nic-${suffix}'
-var ipConfigName = 'ipconfig-${suffix}'
-var nsgName = 'nsg-${suffix}'
 
-var vmType = 'Standard_D2s_v3'
 
 resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   name: 'vnet-on-prem'
@@ -39,98 +34,17 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing 
   name: '${vnet.name}/${subnetName}'
 }
 
-resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = {
-  name: nsgName
-  location: location
-  properties: {
-    securityRules: [
-      {
-        name: 'allow-http'
-        properties: {
-          priority: 1000
-          protocol: 'Tcp'
-          access: 'Allow'
-          direction: 'Inbound'
-          sourceAddressPrefix: '*'
-          sourcePortRange: '80'
-          destinationAddressPrefix: '*'
-          destinationPortRange: '80'
-        }
-      }
-    ]
-  }
-}
 
-resource nic 'Microsoft.Network/networkInterfaces@2020-11-01' = {
-  name: nicName
-  location: location
-  properties: {
-    ipConfigurations: [
-      {
-        name: ipConfigName
-        properties: {
-          privateIPAllocationMethod: 'Dynamic'
-          subnet: {
-            id: subnet.id
-          }
-        }
-      }
-    ]
-    networkSecurityGroup: {
-      id: nsg.id
-    }
-  }
-}
-
-resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
-  name: vmName
-  location: location
-  properties: {
-    hardwareProfile: {
-      vmSize: vmType
-    }
-    storageProfile: {
-      imageReference: {
-        publisher: 'Canonical'
-        offer: '0001-com-ubuntu-server-focal'
-        sku: '20_04-LTS'
-        version: 'latest'
-      }
-      osDisk: {
-        createOption: 'FromImage'
-      }
-    }
-    osProfile: {
-      computerName: vmName
-      adminUsername: userName
-      adminPassword: password
-    }
-    networkProfile: {
-      networkInterfaces: [
-        { 
-          id: nic.id 
-        }
-      ]
-    }
-  }
-}
-
-resource nginx 'Microsoft.Compute/virtualMachines/extensions@2020-12-01' = {
-  name: '${vm.name}/nginx'
-  location: location
-  properties: {
-    publisher: 'Microsoft.Azure.Extensions'
-    type: 'CustomScript'
-    typeHandlerVersion: '2.1'
-    autoUpgradeMinorVersion: true
-    protectedSettings: {
-      fileUris: [
-        'https://raw.githubusercontent.com/meken/azure-private-link/main/assets/install-nginx.sh'
-      ]
-      commandToExecute: 'sh install-nginx.sh'
-    }
+module odataServer 'reverse-proxy.bicep' = {
+  name: 'vm-odata'
+  params: {
+    userName: userName
+    password: password
+    proxyTarget: '"https://services.odata.org/V3/Northwind/"'
+    subnetId: subnet.id
+    suffix: suffix
   }
 }
 
 output vnetId string = vnet.id // needed for peering
-output vmIp string = reference(nic.id, '2020-11-01').ipConfigurations[0].properties.privateIPAddress
+output vmIp string = odataServer.outputs.vmIp

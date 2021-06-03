@@ -39,6 +39,8 @@ In order to simulate a more realistic situation, we'll set up the Load Balancer 
 az deployment group create -g $RG_PL_SVC -f assets/vnet-peering.bicep
 ```
 
+Note that the subnet that's going to be used for the Private Link Service will have to have its `privateLinkServiceNetworkPolicies` attribute set to `false`, which is done automatically by the command above.
+
 ## Connect through the private endpint
 
 > TODO ADF managed vnet

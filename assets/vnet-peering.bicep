@@ -8,28 +8,18 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   properties: {
     addressSpace: {
       addressPrefixes: [
-        '10.4.0.0/16'
+        '172.1.0.0/16'
       ]
     }
     subnets: [
       {
         name: 'default'
         properties: {
-          addressPrefix: '10.4.1.0/24'
+          addressPrefix: '172.1.0.0/24'
+          privateLinkServiceNetworkPolicies: 'Disabled'
         }
       }
     ]
-  }
-}
-
-resource peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-11-01' = {
-  name: '${vnet.name}/peer-plink-to-on-prem'
-  properties: {
-    allowVirtualNetworkAccess: true
-    allowForwardedTraffic: false
-    remoteVirtualNetwork: {
-        id: onPremVnetId
-    }    
   }
 }
 
