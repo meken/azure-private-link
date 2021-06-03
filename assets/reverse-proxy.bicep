@@ -5,11 +5,11 @@ param userName string
 @secure()
 param password string
 
+param vmName string = 'vm-${suffix}'
 param lbBackendPools array  = []
 
 var location = resourceGroup().location
 
-var vmName = 'vm-${suffix}'
 var nicName = 'nic-${suffix}'
 var ipConfigName = 'ipconfig-${suffix}'
 var nsgName = 'nsg-${suffix}'

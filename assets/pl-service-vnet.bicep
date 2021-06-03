@@ -3,7 +3,7 @@ param suffix string = 'odata-service'
 var location = resourceGroup().location
 
 var vnetName = 'vnet-plink-service'
-var subnetName = 'subnet-${suffix}'
+var subnetName = 'subnet-plink-${suffix}'
 
 resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   name: vnetName

@@ -26,11 +26,23 @@ az network vnet peering create \
   -g $RG_ON_PREM \
   --vnet-name $VNET_ON_PREM_NAME \
   --remote-vnet $VNET_PL_ID \
-  --allow-vnet-access
+  --allow-vnet-access \
+  --query provisioningState \
+  -o tsv
 
 az network vnet peering create \
   -n peer-plink-to-on-prem \
   -g $RG_PL_SVC \
   --vnet-name $VNET_PL_NAME \
   --remote-vnet $VNET_ON_PREM_ID \
-  --allow-vnet-access
+  --allow-vnet-access \
+  --query provisioningState \
+  -o tsv
+
+az deployment group create \
+  -g $RG_PL_SVC \
+  -f pl-service.bicep \
+  --parameters backendVmIp=$SRC_VM_IP \
+    vnetOnPremId=$VNET_ON_PREM_ID \
+    vnetPrivateLinkId=$VNET_PL_ID \
+    subnetPrivateLinkId=$SUBNET_PL_ID

@@ -1,12 +1,13 @@
 param suffix string = 'odata-service'
+
 param userName string = 'odata'
 @secure()
-param password string = concat('P', uniqueString(resourceGroup().id), 'x!')
+param password string = newGuid()
 
 var location = resourceGroup().location
 
 var vnetName = 'vnet-on-prem'
-var subnetName = 'subnet-${suffix}'
+var subnetName = 'subnet-on-prem-${suffix}'
 
 
 resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {

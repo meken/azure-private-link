@@ -1,11 +1,12 @@
+param suffix string = 'odata-service'
+
 param backendVmIp string
 param vnetOnPremId string
 param vnetPrivateLinkId string
 param subnetPrivateLinkId string
 param userName string = 'proxy'
 @secure()
-param password string = concat('P', uniqueString(resourceGroup().id), 'x!')
-param suffix string = 'odata-service'
+param password string = newGuid()
 
 var location = resourceGroup().location
 
@@ -136,6 +137,7 @@ module proxyServer 'reverse-proxy.bicep' = {
     proxyTarget: '${proxyDNS}.${domainName}'
     subnetId: subnetPrivateLinkId
     lbBackendPools: lb.properties.backendAddressPools
+    vmName: 'vm-proxy-${suffix}'
     suffix: suffix
   }
 }
