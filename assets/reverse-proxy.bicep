@@ -6,7 +6,6 @@ param userName string
 param password string
 
 param vmName string = 'vm-${suffix}'
-param lbBackendPools array  = []
 
 var location = resourceGroup().location
 
@@ -51,7 +50,6 @@ resource nic 'Microsoft.Network/networkInterfaces@2020-11-01' = {
           subnet: {
             id: subnetId
           }
-          loadBalancerBackendAddressPools: lbBackendPools
         }
       }
     ]
@@ -112,3 +110,4 @@ resource nginx 'Microsoft.Compute/virtualMachines/extensions@2020-12-01' = {
 }
 
 output vmIp string = reference(nic.id, '2020-11-01').ipConfigurations[0].properties.privateIPAddress
+output vmIpConfigId string = reference(nic.id, '2020-11-01').ipConfigurations[0].id

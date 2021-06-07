@@ -9,6 +9,9 @@ var location = resourceGroup().location
 var vnetName = 'vnet-on-prem'
 var subnetName = 'subnet-on-prem-${suffix}'
 
+var vnetCIDR = '10.1.0.0/16'
+var subnetCIDR = '10.1.1.0/24'
+
 
 resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   name: vnetName
@@ -16,14 +19,14 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   properties: {
     addressSpace: {
       addressPrefixes: [
-        '10.1.0.0/16'
+        vnetCIDR
       ]
     }
     subnets: [
       {
         name: subnetName
         properties: {
-          addressPrefix: '10.1.1.0/24'
+          addressPrefix: subnetCIDR
         }
       }
     ]
@@ -39,7 +42,7 @@ module odataServer 'reverse-proxy.bicep' = {
   params: {
     userName: userName
     password: password
-    proxyTarget: 'https://services.odata.org/V3/Northwind/'
+    proxyTarget: 'https://services.odata.org/V3/Northwind/Northwind.svc/'
     subnetId: subnet.id
     suffix: suffix
   }

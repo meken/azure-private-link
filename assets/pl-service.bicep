@@ -1,9 +1,10 @@
 param suffix string = 'odata-service'
 
-param backendVmIp string
+param vmOnPremIp string
 param vnetOnPremId string
-param vnetPrivateLinkId string
-param subnetPrivateLinkId string
+param vnetOnPremName string
+param rgOnPremName string
+
 param userName string = 'proxy'
 @secure()
 param password string = newGuid()
@@ -21,6 +22,54 @@ var domainName = 'contoso.com'
 var proxyDNS = 'proxy-${suffix}'
 var sourceDNS = 'on-prem-${suffix}'
 
+var vnetName = 'vnet-plink-service'
+var subnetName = 'subnet-plink-${suffix}'
+var vnetCIDR = '192.168.0.0/16'
+var subnetCIDR = '192.168.1.0/24'
+
+resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
+  name: vnetName
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        vnetCIDR
+      ]
+    }
+    subnets: [
+      {
+        name: subnetName
+        properties: {
+          addressPrefix: subnetCIDR
+          privateLinkServiceNetworkPolicies: 'Disabled'
+        }
+      }
+    ]
+  }
+}
+
+resource subnet 'Microsoft.Network/virtualNetworks/subnets@2020-11-01' existing = {
+  name: '${vnet.name}/${subnetName}'
+}
+
+module peering1 'vnet-peer.bicep' = {
+  name: 'plink-to-on-prem'
+  params: {
+    peeringName: 'peer-on-prem-to-plink'
+    vnetName: vnet.name
+    vnetRemoteId: vnetOnPremId
+  }
+}
+
+module peering2 'vnet-peer.bicep' = {
+  name: 'on-prem-to-plink'
+  scope: resourceGroup(rgOnPremName)
+  params: {
+    peeringName: 'peer-on-prem-to-plink'
+    vnetName: vnetOnPremName
+    vnetRemoteId: vnet.id
+  }
+}
 
 resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
   name: lbName
@@ -34,7 +83,7 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
         properties: {
           privateIPAllocationMethod: 'Dynamic'
           subnet: {
-            id: subnetPrivateLinkId // could be a different subnet as well
+            id: subnet.id // could be a different subnet as well
           }
         }
         zones: [
@@ -54,6 +103,7 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
           port: 80
           protocol: 'Http'
           requestPath: '/'
+          intervalInSeconds: 60
         }
       }
     ]
@@ -63,6 +113,8 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
           frontendPort: 80
           backendPort: 80
           protocol: 'Tcp'
+          disableOutboundSnat: true
+          enableTcpReset: true
           frontendIPConfiguration: {
             id: resourceId('Microsoft.Network/loadBalancers/frontEndIpConfigurations', lbName, feName)
           }
@@ -78,8 +130,6 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
   }
 }
 
-
-
 resource pdnsz 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: domainName
   location: 'global'
@@ -91,7 +141,7 @@ resource pdnszVnet 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-0
   properties: {
     registrationEnabled: false
     virtualNetwork: {
-      id: vnetPrivateLinkId
+      id: vnet.id
     }
   }
 }
@@ -123,22 +173,20 @@ resource pdnszRecordSource 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   properties: {
     ttl: 3600
     aRecords: [{
-        ipv4Address: backendVmIp
+        ipv4Address: vmOnPremIp
       }
     ]
   }
 }
 
 module proxyServer 'reverse-proxy.bicep' = {
-  name: 'vm-proxy-${suffix}'
+  name: 'vm-${proxyDNS}'
   params: {
     userName: userName
     password: password
-    proxyTarget: '${proxyDNS}.${domainName}'
-    subnetId: subnetPrivateLinkId
-    lbBackendPools: lb.properties.backendAddressPools
-    vmName: 'vm-proxy-${suffix}'
-    suffix: suffix
+    proxyTarget:  'http://${sourceDNS}.${domainName}/'
+    subnetId: subnet.id
+    suffix: proxyDNS
   }
 }
 
@@ -160,7 +208,7 @@ resource pls 'Microsoft.Network/privateLinkServices@2020-11-01' = {
         properties: {
           privateIPAllocationMethod: 'Dynamic'
           subnet: {
-            id: subnetPrivateLinkId
+            id: subnet.id
           }
         }
       }
@@ -168,3 +216,6 @@ resource pls 'Microsoft.Network/privateLinkServices@2020-11-01' = {
   }
 }
 
+output lbName string = lbName
+output poolName string = poolName
+output ipConfigId string = proxyServer.outputs.vmIpConfigId
