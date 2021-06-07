@@ -219,3 +219,6 @@ resource pls 'Microsoft.Network/privateLinkServices@2020-11-01' = {
 output lbName string = lbName
 output poolName string = poolName
 output ipConfigId string = proxyServer.outputs.vmIpConfigId
+output plsName string = pls.name
+output plsId string = pls.id
+output plsFqdns string = '${sourceDNS}.${domainName}'

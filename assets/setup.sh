@@ -27,5 +27,21 @@ OUTPUTS=`az deployment group create -g $RG_PL_SVC \
 LB_NAME=`echo "$OUTPUTS" | jq -r .lbName.value`
 POOL_NAME=`echo "$OUTPUTS" | jq -r .poolName.value`
 PROXY_IP_CONFIG_ID=`echo "$OUTPUTS" | jq -r .ipConfigId.value`
+PL_SVC_NAME=`echo "$OUTPUTS" | jq -r .plsName.value`
+PL_SVC_ID=`echo "$OUTPUTS" | jq -r .plsId.value`
+PL_SVC_FQDNS=`echo "$OUTPUTS" | jq -r .plsFqdns.value`
+
 
 az network nic ip-config update --ids $PROXY_IP_CONFIG_ID --lb-name $LB_NAME --lb-address-pools $POOL_NAME
+
+
+az deployment group create -g $RG_PL_EP -f pl-endpoint.bicep \
+  --parameters \
+    privateLinkServiceId=$PL_SVC_ID \
+    privateLinkServiceFqdns=$PL_SVC_FQDNS \
+  --query properties.outputs
+
+
+PL_EP_NAME=`az network private-link-service show --ids $PL_SVC_ID --query privateEndpointConnections[0].name -o tsv`
+
+az network private-link-service connection update -g $RG_PL_SVC -n $PL_EP_NAME --service-name $PL_SVC_NAME --connection-status Approved 
