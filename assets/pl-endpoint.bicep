@@ -7,7 +7,7 @@ var location = resourceGroup().location
 
 
 resource adf 'Microsoft.DataFactory/factories@2018-06-01' = {
-  name: 'adf-${suffix}'
+  name: 'adf-${suffix}-${substring(uniqueString(resourceGroup().id), 0, 5)}'
   location: location
 }
 

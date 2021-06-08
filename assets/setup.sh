@@ -1,7 +1,7 @@
 #!/bin/bash
-RG_ON_PREM=
-RG_PL_SVC=
-RG_PL_EP=
+RG_ON_PREM=rg-on-prem
+RG_PL_SVC=rg-plink-service
+RG_PL_EP=rg-plink-endpoint
 
 LOCATION=westeurope
 
@@ -34,6 +34,8 @@ PL_SVC_FQDNS=`echo "$OUTPUTS" | jq -r .plsFqdns.value`
 
 az network nic ip-config update --ids $PROXY_IP_CONFIG_ID --lb-name $LB_NAME --lb-address-pools $POOL_NAME
 
+
+az group create -n $RG_PL_EP -l $LOCATION
 
 az deployment group create -g $RG_PL_EP -f pl-endpoint.bicep \
   --parameters \
