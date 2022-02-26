@@ -9,7 +9,7 @@ param userName string = 'proxy'
 @secure()
 param password string = newGuid()
 
-var location = resourceGroup().location
+param location string = resourceGroup().location
 
 var lbName = 'lb-${suffix}'
 var feName = 'front-end-${suffix}'
@@ -78,7 +78,8 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
     name: 'Standard'
   }
   properties: {
-    frontendIPConfigurations: [{
+    frontendIPConfigurations: [
+      {
         name: feName
         properties: {
           privateIPAllocationMethod: 'Dynamic'
@@ -93,11 +94,13 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
         ]
       }
     ]
-    backendAddressPools: [{
+    backendAddressPools: [
+      {
         name: poolName
       }
     ]
-    probes: [{
+    probes: [
+      {
         name: probeName
         properties: {
           port: 80
@@ -107,7 +110,8 @@ resource lb 'Microsoft.Network/loadBalancers@2020-11-01' = {
         }
       }
     ]
-    loadBalancingRules: [{
+    loadBalancingRules: [
+      {
         name: 'rule-http-forward'
         properties: {
           frontendPort: 80
@@ -161,7 +165,8 @@ resource pdnszRecordProxy 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   name: '${pdnsz.name}/${proxyDNS}'
   properties: {
     ttl: 3600
-    aRecords: [{
+    aRecords: [
+      {
         ipv4Address: lb.properties.frontendIPConfigurations[0].properties.privateIPAddress
       }
     ]
@@ -172,7 +177,8 @@ resource pdnszRecordSource 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   name: '${pdnsz.name}/${sourceDNS}'
   properties: {
     ttl: 3600
-    aRecords: [{
+    aRecords: [
+      {
         ipv4Address: vmOnPremIp
       }
     ]
@@ -199,11 +205,13 @@ resource pls 'Microsoft.Network/privateLinkServices@2020-11-01' = {
         subscription().subscriptionId
       ]
     }
-    loadBalancerFrontendIpConfigurations: [{
+    loadBalancerFrontendIpConfigurations: [
+      {
         id: lb.properties.frontendIPConfigurations[0].id
       }
     ]
-    ipConfigurations: [{
+    ipConfigurations: [
+      {
         name: 'default-${suffix}'
         properties: {
           privateIPAllocationMethod: 'Dynamic'
