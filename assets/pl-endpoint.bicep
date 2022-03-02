@@ -3,7 +3,7 @@ param privateLinkServiceId string
 param privateLinkServiceFqdns string
 
 
-var location = resourceGroup().location
+param location string= resourceGroup().location
 
 
 resource adf 'Microsoft.DataFactory/factories@2018-06-01' = {

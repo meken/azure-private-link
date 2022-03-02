@@ -7,7 +7,7 @@ param password string
 
 param vmName string = 'vm-${suffix}'
 
-var location = resourceGroup().location
+param location string = resourceGroup().location
 
 var nicName = 'nic-${suffix}'
 var ipConfigName = 'ipconfig-${suffix}'

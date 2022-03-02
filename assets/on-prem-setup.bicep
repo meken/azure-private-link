@@ -4,7 +4,7 @@ param userName string = 'odata'
 @secure()
 param password string = newGuid()
 
-var location = resourceGroup().location
+param location string = resourceGroup().location
 
 var vnetName = 'vnet-on-prem'
 var subnetName = 'subnet-on-prem-${suffix}'
